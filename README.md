@@ -1,70 +1,66 @@
-# Getting Started with Create React App
+# YDHM Logistics Corp.
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+The repository separates the Flask API (`backend/`) from the React application (`front/`).
 
-## Available Scripts
+## Requirements
 
-In the project directory, you can run:
+- Node.js 20 or newer
+- pnpm
+- Python 3.10 or newer
+- Docker Compose
 
-### `npm start`
+## Frontend
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```powershell
+cd front
+pnpm install
+pnpm dev
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+The frontend runs at `http://127.0.0.1:5300`. From `front/`, use `pnpm build`,
+`pnpm test`, or `pnpm preview` for the production build, tests, or preview.
 
-### `npm test`
+Copy `front/.env.example` to `front/.env.local` and fill in the required values.
+Client environment variables belong in `front/.env.local`. Values prefixed
+with `VITE_` are embedded in the browser bundle and must not be treated as
+server secrets. Restrict provider keys (such as Mapbox) to the required
+origins, APIs, and quotas.
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Backend
 
-### `npm run build`
+Copy `backend/.env.example` to `backend/.env`. Generate separate secrets for
+`POSTGRES_PASSWORD` and `JWT_SECRET_KEY` with:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```powershell
+python -c "import secrets; print(secrets.token_hex(32))"
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+Use the generated PostgreSQL secret in both `POSTGRES_PASSWORD` and the
+password portion of `DATABASE_URL`; use a different value for `JWT_SECRET_KEY`.
+Start the database and API:
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+```powershell
+cd backend
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+docker compose up -d
+python -m venv .venv
+.venv\Scripts\python -m pip install -r requirements.txt
+flask --app app create-admin
+python app.py
+```
 
-### `npm run eject`
+The API rejects missing or weak JWT signing keys. PostgreSQL is only published
+on localhost. On first startup the API seeds operational demo data, but no
+accounts or shared default passwords. Create the first manager with
+`flask --app app create-admin`; the command prompts for a password without
+echoing it and requires at least 12 characters.
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+The dashboard consumes `/api/*` through the Vite proxy while the API is running.
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+## Publishing checklist
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
-
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
-
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- Never commit `.env`, `.env.local`, virtual environments, uploads, dependencies,
+  build output, or database files.
+- If any credential has ever been published or exposed, rotate it at its
+  provider; removing it from the current files is not sufficient.
+- Treat `VITE_` settings as public browser configuration, not secret storage.
